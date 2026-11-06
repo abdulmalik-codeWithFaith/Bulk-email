@@ -14,9 +14,12 @@ npm run dev                  # http://localhost:3000
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `RESEND_API_KEY` | yes | Your Resend API key. Stays on the server. |
-| `EMAIL_FROM` | yes | Sender, e.g. `Name <hello@yourdomain.com>`. The domain must be verified in Resend. |
-| `ACCESS_KEY` | yes | Password the page asks for before sending, so strangers can't use your API key. |
+| `SMTP_HOST` | yes | Your SMTP server, e.g. `smtp.gmail.com` or `smtp.zoho.com`. |
+| `SMTP_PORT` | no | Default `587` (STARTTLS). Use `465` for SSL. |
+| `SMTP_SECURE` | no | `true`/`false`. Defaults to true only on port 465. |
+| `SMTP_USER` / `SMTP_PASS` | yes | SMTP login. For Gmail use an App Password, not your normal password. |
+| `EMAIL_FROM` | yes | Sender, e.g. `Name <you@example.com>`. Most providers require it to match `SMTP_USER`. |
+| `ACCESS_KEY` | yes | Password the page asks for before sending, so strangers can't use your SMTP login. |
 | `REPLY_TO` | no | Where replies go. |
 | `UNSUBSCRIBE_EMAIL` | no | Shown in the footer and added as a `List-Unsubscribe` header. |
 | `FOOTER_ADDRESS` | no | Organisation / postal address line in the footer. |
@@ -28,7 +31,8 @@ First row must be headers. Columns are matched loosely: anything containing `ema
 ## Notes
 
 - Max 500 contacts. Duplicates (by email, case-insensitive) are skipped; invalid emails are flagged and never sent.
-- Emails go out in batches of 50 via Resend's batch API; each person gets their own individual email (no one sees other recipients).
+- Emails go out in batches of 10 through a pooled SMTP connection (3 at a time); each person gets their own individual email (no one sees other recipients).
+- Provider limits apply: a normal Gmail account allows roughly 500 emails/day, so 500 contacts is about the daily maximum. Use a business/transactional SMTP service for more.
 - `{{name}}` in the subject or body is replaced per recipient (falls back to "there").
 - After a send, failed contacts stay in the table; the button becomes **Retry** and only targets unsent ones.
 - Honor unsubscribe requests: remove those people from future CSVs. Contacts are not stored anywhere (no database), they live in the browser until you refresh.

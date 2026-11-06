@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import Papa from "papaparse";
 
 const MAX_CONTACTS = 500;
-const BATCH_SIZE = 50;
+const BATCH_SIZE = 10;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 type Status = "pending" | "sent" | "failed";
