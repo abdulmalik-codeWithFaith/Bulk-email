@@ -26,7 +26,7 @@ npm run dev                  # http://localhost:3000
 
 ## CSV format
 
-First row must be headers. Columns are matched loosely: anything containing `email`, `name` or `phone`/`mobile`. Zoho's split `Name (First Name)` / `Name (Last Name)` columns are joined automatically.
+Works with `.csv` and `.xlsx` (first sheet). First row must be headers. Columns are matched loosely: anything containing `email`, `name` or `phone`/`mobile`. Zoho's split `Name (First Name)` / `Name (Last Name)` columns are joined automatically.
 
 ## Notes
 

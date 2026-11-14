@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import Papa from "papaparse";
+import readXlsxFile from "read-excel-file";
 
 const MAX_CONTACTS = 500;
 const BATCH_SIZE = 10;
@@ -77,23 +78,55 @@ export default function Page() {
     setNotice(parts.join(" · "));
   }
 
-  function onFile(file: File | undefined) {
+  function importRows(data: Record<string, string>[]) {
+    const rows = data.map((row) => ({
+      email: pick(row, (h) => h.includes("email") || h.includes("e-mail")),
+      name: pick(row, (h) => h.includes("name")),
+      phone: pick(row, (h) => h.includes("phone") || h.includes("mobile")),
+    }));
+    if (!rows.some((r) => r.email)) {
+      setNotice("No email column found. Make sure the first row has a header like “Email”.");
+    } else {
+      merge(rows);
+    }
+  }
+
+  async function onFile(file: File | undefined) {
     if (!file) return;
+    const done = () => {
+      if (fileRef.current) fileRef.current.value = "";
+    };
+
+    if (/\.xlsx$/i.test(file.name)) {
+      try {
+        const sheet = await readXlsxFile(file); // first sheet
+        const [header, ...rest] = sheet;
+        const keys = (header ?? []).map((h) => String(h ?? "").trim());
+        const data = rest.map((cells) => {
+          const obj: Record<string, string> = {};
+          keys.forEach((k, i) => {
+            if (k) obj[k] = cells[i] == null ? "" : String(cells[i]);
+          });
+          return obj;
+        });
+        importRows(data);
+      } catch {
+        setNotice("Could not read that Excel file. Save it as .xlsx (or export as CSV) and try again.");
+      }
+      return done();
+    }
+
+    if (/\.xls$/i.test(file.name)) {
+      setNotice("Old .xls files are not supported. In Excel choose Save As → .xlsx or CSV.");
+      return done();
+    }
+
     Papa.parse<Record<string, string>>(file, {
       header: true,
       skipEmptyLines: true,
       complete: (res) => {
-        const rows = res.data.map((row) => ({
-          email: pick(row, (h) => h.includes("email") || h.includes("e-mail")),
-          name: pick(row, (h) => h.includes("name")),
-          phone: pick(row, (h) => h.includes("phone") || h.includes("mobile")),
-        }));
-        if (!rows.some((r) => r.email)) {
-          setNotice("No email column found. Make sure the CSV has a header like “Email”.");
-        } else {
-          merge(rows);
-        }
-        if (fileRef.current) fileRef.current.value = "";
+        importRows(res.data);
+        done();
       },
       error: () => setNotice("Could not read that file."),
     });
@@ -184,11 +217,11 @@ export default function Page() {
           <input
             ref={fileRef}
             type="file"
-            accept=".csv,text/csv"
+            accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             onChange={(e) => onFile(e.target.files?.[0])}
             className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-indigo-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-indigo-700"
           />
-          <span className="text-xs text-slate-500">CSV with columns for name, email, phone</span>
+          <span className="text-xs text-slate-500">CSV or Excel (.xlsx) with columns for name, email, phone</span>
         </div>
 
         <form onSubmit={addManual} className="grid grid-cols-1 gap-2 sm:grid-cols-4">
@@ -263,6 +296,7 @@ export default function Page() {
                           ) : c.status === "failed" ? (
                             <span className="text-red-600" title={c.error}>
                               Failed
+                              {c.error && <span className="block max-w-[220px] text-xs">{c.error}</span>}
                             </span>
                           ) : (
                             <span className="text-slate-400">Pending</span>
